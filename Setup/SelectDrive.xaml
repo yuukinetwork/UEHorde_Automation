@@ -1,0 +1,325 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Window
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:Name="DriveSelectionWindow"
+    Title="ドライブの選択"
+    Width="850"
+    Height="720"
+    MinWidth="500"
+    MinHeight="420"
+    WindowStartupLocation="CenterScreen"
+    ResizeMode="CanResize"
+    ShowActivated="True"
+    ShowInTaskbar="True"
+    Topmost="True"
+    Background="#F3F4F6"
+    FontFamily="Yu Gothic UI">
+
+    <Window.Resources>
+        <Style x:Key="DriveButtonStyle" TargetType="Button">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#EFF6FF"/>
+                    <Setter Property="BorderBrush" Value="#60A5FA"/>
+                </Trigger>
+
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#DBEAFE"/>
+                </Trigger>
+
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#E5E7EB"/>
+                    <Setter Property="BorderBrush" Value="#D1D5DB"/>
+                    <Setter Property="Foreground" Value="#9CA3AF"/>
+                    <Setter Property="Opacity" Value="0.65"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="ProgressBar">
+            <Setter Property="Height" Value="14"/>
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="100"/>
+            <Setter Property="Background" Value="#E5E7EB"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="12"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="18"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="18"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+		
+		<!-- タイトル -->
+        <StackPanel Grid.Row="0">
+            <TextBlock
+                Text="ドライブを選択"
+                FontSize="24"
+                FontWeight="SemiBold"
+                Foreground="#111827"/>
+
+            <TextBlock
+                x:Name="txtUsageDescription"
+                Margin="0,6,0,0"
+                Foreground="#4B5563"
+                TextWrapping="Wrap"/>
+        </StackPanel>
+
+
+        <!-- 使用容量目安 -->
+        <Border
+            Grid.Row="2"
+            Padding="12"
+            Background="#EFF6FF"
+            BorderBrush="#BFDBFE"
+            BorderThickness="1"
+            CornerRadius="5">
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock
+                    Grid.Column="0"
+                    Text="使用容量目安"
+                    FontWeight="SemiBold"
+                    Foreground="#1E3A8A"
+                    VerticalAlignment="Center"/>
+
+                <TextBlock
+                    x:Name="txtEstimatedUsage"
+                    Grid.Column="2"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Foreground="#1E40AF"
+                    TextWrapping="Wrap"
+                    VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- ドライブ一覧 -->
+        <Border
+            Grid.Row="4"
+            Padding="12"
+            Background="White"
+            BorderBrush="#D1D5DB"
+            BorderThickness="1"
+            CornerRadius="8">
+
+			<ListBox
+                x:Name="driveList"
+                SelectionMode="Single"
+                Background="Transparent"
+                BorderThickness="0"
+                HorizontalContentAlignment="Stretch"
+				ScrollViewer.VerticalScrollBarVisibility="Auto"
+				ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+				ScrollViewer.CanContentScroll="False">
+
+				<ListBox.ItemContainerStyle>
+					<Style TargetType="ListBoxItem">
+						<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+						<Setter Property="Padding" Value="0"/>
+						<Setter Property="Margin" Value="0,0,0,10"/>
+						<Setter Property="IsEnabled" Value="{Binding CanSelect}"/>
+
+						<Setter Property="Template">
+							<Setter.Value>
+								<ControlTemplate TargetType="ListBoxItem">
+									<Border
+										x:Name="ItemBorder"
+										Padding="16"
+										Background="White"
+										BorderBrush="#D1D5DB"
+										BorderThickness="1"
+										CornerRadius="5">
+
+										<ContentPresenter/>
+									</Border>
+
+									<ControlTemplate.Triggers>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter
+												TargetName="ItemBorder"
+												Property="Background"
+												Value="#EFF6FF"/>
+
+											<Setter
+												TargetName="ItemBorder"
+												Property="BorderBrush"
+												Value="#60A5FA"/>
+										</Trigger>
+
+										<Trigger Property="IsSelected" Value="True">
+											<Setter
+												TargetName="ItemBorder"
+												Property="Background"
+												Value="#DBEAFE"/>
+
+											<Setter
+												TargetName="ItemBorder"
+												Property="BorderBrush"
+												Value="#2563EB"/>
+
+											<Setter
+												TargetName="ItemBorder"
+												Property="BorderThickness"
+												Value="2"/>
+										</Trigger>
+
+										<Trigger Property="IsEnabled" Value="False">
+											<Setter
+												TargetName="ItemBorder"
+												Property="Background"
+												Value="#E5E7EB"/>
+
+											<Setter
+												TargetName="ItemBorder"
+												Property="BorderBrush"
+												Value="#D1D5DB"/>
+
+											<Setter Property="Opacity" Value="0.6"/>
+										</Trigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</Setter.Value>
+						</Setter>
+					</Style>
+				</ListBox.ItemContainerStyle>
+
+				<ListBox.ItemTemplate>
+					<DataTemplate>
+						<Grid>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="Auto"/>
+								<RowDefinition Height="10"/>
+								<RowDefinition Height="Auto"/>
+								<RowDefinition Height="8"/>
+								<RowDefinition Height="Auto"/>
+								<RowDefinition Height="6"/>
+								<RowDefinition Height="Auto"/>
+							</Grid.RowDefinitions>
+
+							<Grid Grid.Row="0">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="*"/>
+									<ColumnDefinition Width="Auto"/>
+								</Grid.ColumnDefinitions>
+
+								<StackPanel>
+									<TextBlock
+										Text="{Binding DisplayName}"
+										FontSize="16"
+										FontWeight="SemiBold"
+										Foreground="#111827"
+										TextTrimming="CharacterEllipsis"/>
+
+									<TextBlock
+										Margin="0,3,0,0"
+										Text="{Binding DiskDescription}"
+										FontSize="12"
+										Foreground="#6B7280"
+										TextTrimming="CharacterEllipsis"/>
+								</StackPanel>
+
+								<TextBlock
+									Grid.Column="1"
+									Margin="12,0,0,0"
+									Text="{Binding DriveLetter}"
+									FontSize="18"
+									FontWeight="SemiBold"
+									Foreground="#374151"
+									VerticalAlignment="Center"/>
+							</Grid>
+
+							<ProgressBar
+								Grid.Row="2"
+								Value="{Binding UsedPercent}"/>
+
+							<Grid Grid.Row="4">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="*"/>
+									<ColumnDefinition Width="Auto"/>
+								</Grid.ColumnDefinitions>
+
+								<TextBlock
+									Text="{Binding SpaceText}"
+									Foreground="#4B5563"
+									TextWrapping="Wrap"/>
+
+								<TextBlock
+									Grid.Column="1"
+									Margin="12,0,0,0"
+									Text="{Binding PercentageText}"
+									Foreground="#4B5563"/>
+							</Grid>
+
+							<TextBlock
+								Grid.Row="6"
+								Text="{Binding CapacityStatusText}"
+								Foreground="{Binding CapacityStatusColor}"
+								FontWeight="SemiBold"
+								TextWrapping="Wrap"/>
+						</Grid>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+			</ListBox>
+        </Border>
+
+        <!-- 下部 -->
+		<Grid Grid.Row="6">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="10"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<TextBlock
+				x:Name="txtStatus"
+				VerticalAlignment="Center"
+				Foreground="#6B7280"
+				TextWrapping="Wrap"/>
+
+			<Button
+				x:Name="btnCancel"
+				Grid.Column="1"
+				MinWidth="110"
+				MinHeight="38"
+				Padding="18,8"
+				Content="キャンセル"
+				IsCancel="True"/>
+
+			<Button
+				x:Name="btnConfirm"
+				Grid.Column="3"
+				MinWidth="110"
+				MinHeight="38"
+				Padding="18,8"
+				Content="決定"
+				IsDefault="True"
+				IsEnabled="False"/>
+		</Grid>
+    </Grid>
+</Window>
