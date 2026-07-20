@@ -1,0 +1,159 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Window
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:Name="P4LoginWindow"
+    Title="Perforce 認証"
+    Width="850"
+    Height="720"
+    MinWidth="520"
+    MinHeight="380"
+    WindowStartupLocation="CenterScreen"
+    ResizeMode="CanResize"
+    ShowActivated="True"
+    ShowInTaskbar="True"
+    Topmost="True"
+    Background="#F3F4F6"
+    FontFamily="Yu Gothic UI">
+
+    <Window.Resources>
+        <Style TargetType="TextBox">
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+        </Style>
+
+        <Style TargetType="PasswordBox">
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="18"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock
+                Text="Perforce Server 認証"
+                FontSize="24"
+                FontWeight="SemiBold"
+                Foreground="#111827"/>
+
+            <TextBlock
+                Margin="0,6,0,0"
+                Text="後続処理で使用するPerforceアカウントを入力してください。"
+                Foreground="#4B5563"
+                TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <Border
+            Grid.Row="2"
+            Padding="22"
+            Background="White"
+            BorderBrush="#D1D5DB"
+            BorderThickness="1"
+            CornerRadius="8">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="18"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="20"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0">
+                    <TextBlock
+                        Text="接続先"
+                        FontWeight="SemiBold"/>
+
+                    <TextBox
+                        x:Name="txtServer"
+                        Margin="0,6,0,0"
+                        IsReadOnly="True"
+                        IsTabStop="False"
+                        Background="#E5E7EB"
+                        Foreground="#6B7280"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="2">
+                    <TextBlock
+                        Text="ユーザー名"
+                        FontWeight="SemiBold"/>
+
+                    <TextBox
+                        x:Name="txtUsername"
+                        Margin="0,6,0,0"
+                        MaxLength="256"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="4">
+                    <TextBlock
+                        Text="パスワード"
+                        FontWeight="SemiBold"/>
+
+                    <PasswordBox
+                        x:Name="txtPassword"
+                        Margin="0,6,0,0"
+                        MaxLength="1024"/>
+                </StackPanel>
+
+                <Border
+                    Grid.Row="6"
+                    Padding="10"
+                    Background="#EFF6FF"
+                    BorderBrush="#BFDBFE"
+                    BorderThickness="1"
+                    CornerRadius="4">
+
+                    <TextBlock
+                        x:Name="txtStatus"
+                        Text="認証情報を入力してください。"
+                        Foreground="#1E40AF"
+                        TextWrapping="Wrap"/>
+                </Border>
+
+                <Grid Grid.Row="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button
+                        x:Name="btnCancel"
+                        Grid.Column="1"
+                        MinWidth="110"
+                        MinHeight="38"
+                        Padding="18,8"
+                        Content="キャンセル"
+                        IsCancel="True"/>
+
+                    <Button
+                        x:Name="btnLogin"
+                        Grid.Column="3"
+                        MinWidth="110"
+                        MinHeight="38"
+                        Padding="18,8"
+                        Content="ログイン"
+                        IsDefault="True"/>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
