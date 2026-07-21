@@ -9,10 +9,11 @@
 # TempDir: このスクリプトでダウンロードするインストーラやログの一時保存先
 # Auth: 0=HordeServerの認証なし, 1=HordeServerの認証あり
 # AutoEnrollmentMode: 0=HordeServer側でHordeAgent自動登録設定なし, 1=HordeServer側でHordeAgent自動登録設定あり
+# AllowInsecureHttp: HordeServerがlocalhost以外かつhttpの場合に認証を許可するかどうか
 # P4_UTBPath: Perforce上のUnrealBuildTool設定ファイル(HordeAgent用設定ファイル)のパス, この設定ファイルに手元設定ファイルが上書きされる。
 # Local_UTBPath: 手元のUnrealBuildTool設定ファイル(HordeAgent用設定ファイル)のパス
 # SyncBC: $false=BuildConfiguration.xmlの同期なし, $true=BuildConfiguration.xmlの同期あり
-#		  BuildConfigration.xmlの優先度は、projects配下が最優先、次点がAppData以下、最後がProgram File以下
+#		  BuildConfiguration.xmlの優先度は、projects配下が最優先、次点がAppData以下、最後がProgram File以下
 #		  特殊な事情がない限りは、SyncBCを$trueにせず、projects以下に設定を入れるで良い。
 # P4_BCPath: Perforce上のBuildConfiguration.xmlのパス, この設定ファイルの一部(Horde,UBA設定)が手元設定ファイルに上書きされる。
 # Local_BCPath: 手元のBuildConfiguration.xmlのパス
@@ -29,6 +30,7 @@ param(
 	[string]$TempDir="C:\HordeSetupToolTemp",
 	[int]$Auth=0,
 	[int]$AutoEnrollmentMode=0,
+	[switch]$AllowInsecureHttp,
 	[string]$P4Server="localhost:1666",
 	[switch]$P4Unicode,
 	[string]$P4Charset="auto",
@@ -111,7 +113,8 @@ try {
 			$authResult = Show-HordeAuthenticationWindow `
 				-XamlPath $xamlPath `
 				-EndpointUri $authenticationEndpoint `
-				-ReturnUrl $returnUrl
+				-ReturnUrl $returnUrl `
+				-AllowInsecureHttp $AllowInsecureHttp
 
 			if ($authResult.Success) {
 				Write-Host "Hordeの認証に成功しました。" -ForegroundColor Green
@@ -279,7 +282,16 @@ try {
 			[void]$sectionNode.AppendChild($targetNode)
 		}
 
-		$targetNode.InnerText = $sourceNode.InnerText
+		# 同名の既存要素がある場合も、P4側の値で上書きする
+		$targetNodes = $Target.SelectNodes(
+			"/*[local-name()='Configuration']" +
+			"/*[local-name()='$Section']" +
+			"/*[local-name()='$Name']"
+		)
+
+		foreach ($existingTargetNode in $targetNodes) {
+			$existingTargetNode.InnerText = [string]$sourceNode.InnerText
+		}
 	}
 
 
@@ -304,12 +316,15 @@ try {
 
 	# UnrealToolbox install
 	if ($Mode -eq 1) {
+		Write-Host "Downloading UnrealToolbox ..."
 		$UTBInstaller = Join-Path -Path $TempDir -ChildPath "UnrealToolbox.msi"
 		downloadFile -Name "UnrealToolbox" -Path "api/v1/tools/unreal-toolbox-msi?action=download" -OutputFile $UTBInstaller
 		if (-not (Test-Path $UTBInstaller)) {
 			Write-Error "UnrealToolbox installer is not found."
 			exit 1
 		}
+		Write-Host "UnrealToolbox downloaded successfully." -ForegroundColor Green
+		Write-Host "Installing UnrealToolbox ..."
 		try {
 			$process = Start-Process -FilePath msiexec.exe -ArgumentList "/i `"$UTBInstaller`" /qn /norestart /L*v `"$UTBLogFile`" SERVER_URL=`"$HordeServer`"" -Wait -PassThru -Verb RunAs
 		} catch {
@@ -334,12 +349,15 @@ try {
 
 	# HordeAgent install
 	if ($Mode -eq 1) {
+		Write-Host "Downloading UnrealHordeAgent ..."
 		$HAInstaller = Join-Path -Path $TempDir -ChildPath "UnrealHordeAgent.msi"
 		downloadFile -Name "UnrealHordeAgent" -Path "api/v1/tools/horde-agent-msi?action=download" -OutputFile $HAInstaller
 		if (-not (Test-Path $HAInstaller)) {
 			Write-Error "UnrealHordeAgent installer is not found."
 			exit 1
 		}
+		Write-Host "UnrealHordeAgent downloaded successfully." -ForegroundColor Green
+		Write-Host "Installing UnrealHordeAgent ..."
 
 		# 保存先選択処理
 		# 職種・用途によっては極力選択させないようにする
@@ -516,7 +534,7 @@ try {
 	}
 	Write-Host "Deleting TempClientWorkspace completed." -ForegroundColor Green
 
-	# BuildConfigration.xmlの同期
+	# BuildConfiguration.xmlの同期
 	if ($SyncBC) {
 		Write-Host "BuildConfiguration.xml Syncing ..."
 
@@ -527,7 +545,7 @@ try {
 
 		p4 -d $BCLocalPath -p $P4Server -u $p4Context.User -H $Env:Computername -C $p4Context.Charset -Q $p4Context.Charset client -S $P4_BCStream -o $BCName | p4 -d $BCLocalPath -p $P4Server -u $p4Context.User -H $Env:Computername -C $p4Context.Charset -Q $p4Context.Charset client -i
 		if ($LASTEXITCODE -ne 0) {
-			Write-Error "Failed to create Perforce client workspace for BuildConfigration settings. Error: $_"
+			Write-Error "Failed to create Perforce client workspace for BuildConfiguration settings. Error: $_"
 			exit 1
 		}
 
@@ -595,7 +613,7 @@ try {
 				if ($localExists) {
 					$backupName = "$(
 						Get-Date -Format 'yyMMdd'
-					)org.BuildConfigration.xml"
+					)org.BuildConfiguration.xml"
 
 					$backupPath = Join-Path `
 						-Path $localDirectory `
@@ -606,7 +624,7 @@ try {
 						-Destination $backupPath `
 						-Force
 
-					Write-Host "Original BuildConfigration.xml moved to: $backupPath"
+					Write-Host "Original BuildConfiguration.xml moved to: $backupPath"
 				}
 
 				$sourceXmlText = [System.IO.File]::ReadAllText(
@@ -630,7 +648,7 @@ try {
 					Sync-XmlValue `
 						-Source $sourceConfig `
 						-Target $localConfig `
-						-Section "BuildConfigration" `
+						-Section "BuildConfiguration" `
 						-Name $name
 				}
 
