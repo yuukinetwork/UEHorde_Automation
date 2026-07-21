@@ -41,7 +41,7 @@ function Show-HordeAuthenticationWindow {
         [string]$ReturnUrl = "/",
 
         [Parameter()]
-        [switch]$AllowInsecureHttp
+        [boolean]$AllowInsecureHttp = $false
     )
 
     Set-HordeTaskbarIdentity
