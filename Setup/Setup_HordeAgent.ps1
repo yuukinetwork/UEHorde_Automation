@@ -314,6 +314,45 @@ try {
 		}
 	}
 
+	# P4 認証チェック
+	Write-Host "Check Perforce authentication..."
+	try {
+		$p4Context = authP4
+	} catch {
+		Write-Error "Failed to Perforce Authentication. Error: $_"
+		exit 1
+	}
+
+	# 各種インストーラ用設定を各処理で出さず、前倒しで出す
+	$HAworkingDirectory = Join-Path -Path "C:\" -ChildPath $HADirName
+	if ($Mode -eq 1) {
+		# HordeAgent
+		# 保存先選択処理
+		# 職種・用途によっては極力選択させないようにする
+		switch ($JobType) {
+			0 {
+				$HAworkingDirectory = selectDrive -ApplicationName "UnrealHordeAgent" `
+					-UsagePurpose "一時作業ディレクトリとキャッシュの保存" `
+					-Capacity $HACapacity `
+					-DirName $HADirName
+				break
+			}
+			1 {
+				# example: 
+				$HAworkingDirectory = Join-Path -Path "D:\" -ChildPath $HADirName
+				if (Test-Path $HAworkingDirectory){
+					Write-Host "$HAworkingDirectory が既に存在するため、他のドライブを選択してください。" -ForegroundColor Red
+					$HAworkingDirectory = selectDrive -ApplicationName "UnrealHordeAgent" `
+					-UsagePurpose "一時作業ディレクトリとキャッシュの保存" `
+					-Capacity $HACapacity `
+					-DirName $HADirName
+				}
+				Write-Host "保存先: $HAworkingDirectory" -ForegroundColor Green
+				break
+			}
+		}
+	}
+
 	# UnrealToolbox install
 	if ($Mode -eq 1) {
 		Write-Host "Downloading UnrealToolbox ..."
@@ -359,30 +398,7 @@ try {
 		Write-Host "UnrealHordeAgent downloaded successfully." -ForegroundColor Green
 		Write-Host "Installing UnrealHordeAgent ..."
 
-		# 保存先選択処理
-		# 職種・用途によっては極力選択させないようにする
-		switch ($JobType) {
-			0 {
-				$workingDirectory = selectDrive -ApplicationName "UnrealHordeAgent" `
-					-UsagePurpose "一時作業ディレクトリとキャッシュの保存" `
-					-Capacity $HACapacity `
-					-DirName $HADirName
-				break
-			}
-			1 {
-				# example: 
-				$workingDirectory = Join-Path -Path "D:\" -ChildPath $HADirName
-				if (Test-Path $workingDirectory){
-					Write-Host "$workingDirectory が既に存在するため、他のドライブを選択してください。" -ForegroundColor Red
-					$workingDirectory = selectDrive -ApplicationName "UnrealHordeAgent" `
-					-UsagePurpose "一時作業ディレクトリとキャッシュの保存" `
-					-Capacity $HACapacity `
-					-DirName $HADirName
-				}
-				Write-Host "保存先: $workingDirectory" -ForegroundColor Green
-				break
-			}
-		}
+		$workingDirectory = $HAworkingDirectory
 
 		try {
 			$process = Start-Process -FilePath msiexec.exe -ArgumentList "/i `"$HAInstaller`" /qn /norestart /L*v `"$HALogFile`" SERVER_URL=`"$HordeServer`" SANDBOX_DIR=`"$workingDirectory`"" -Wait -PassThru -Verb RunAs
@@ -412,15 +428,6 @@ try {
 			start $EnrollmentPage
 		}
 
-	}
-
-	# P4 認証チェック
-	Write-Host "Check Perforce authentication..."
-	try {
-		$p4Context = authP4
-	} catch {
-		Write-Error "Failed to Perforce Authentication. Error: $_"
-		exit 1
 	}
 
 	# UnrealBuildTool 設定ファイル(HordeAgent.json)の同期
