@@ -6,6 +6,7 @@
 # HordeServer: HordeサーバのURL
 # HADirName: HordeAgentのデータ用ディレクトリ名
 # HACapacity: HordeAgentのデータ用ディレクトリの容量目安, 空き容量足りない場合は選択不可
+# ForceHASSD: 指定時はHordeAgentの作業領域としてSSDのみ選択可能
 # TempDir: このスクリプトでダウンロードするインストーラやログの一時保存先
 # Auth: 0=HordeServerの認証なし, 1=HordeServerの認証あり
 # AutoEnrollmentMode: 0=HordeServer側でHordeAgent自動登録設定なし, 1=HordeServer側でHordeAgent自動登録設定あり
@@ -27,6 +28,7 @@ param(
 	[string]$HordeServer="http://localhost:13340/",
 	[string]$HADirName="HordeAgent",
 	[long]$HACapacity=50GB,
+	[switch]$ForceHASSD,
 	[string]$TempDir="C:\HordeSetupToolTemp",
 	[int]$Auth=0,
 	[int]$AutoEnrollmentMode=0,
@@ -184,7 +186,8 @@ try {
 			[string]$ApplicationName,
 			[string]$UsagePurpose,
 			[long]$Capacity,
-			[string]$DirName
+			[string]$DirName,
+			[switch]$ForceHASSD
 		)
 
 		Write-Host "ドライブ選択画面を出力しています、少々お待ちください..."
@@ -197,7 +200,8 @@ try {
 				-ApplicationName $ApplicationName `
 				-UsagePurpose $UsagePurpose `
 				-EstimatedUsageBytes $Capacity `
-				-PlannedFolderName $DirName
+				-PlannedFolderName $DirName `
+				-ForceHASSD:$ForceHASSD
 
 			if ($null -eq $selectedDrive) {
 				Write-Host "ドライブ選択がキャンセルされました。" -ForegroundColor Yellow
@@ -314,6 +318,47 @@ try {
 		}
 	}
 
+	# P4 認証チェック
+	Write-Host "Check Perforce authentication..."
+	try {
+		$p4Context = authP4
+	} catch {
+		Write-Error "Failed to Perforce Authentication. Error: $_"
+		exit 1
+	}
+
+	# 各種インストーラ用設定を各処理で出さず、前倒しで出す
+	$HAworkingDirectory = Join-Path -Path "C:\" -ChildPath $HADirName
+	if ($Mode -eq 1) {
+		# HordeAgent
+		# 保存先選択処理
+		# 職種・用途によっては極力選択させないようにする
+		switch ($JobType) {
+			0 {
+				$HAworkingDirectory = selectDrive -ApplicationName "UnrealHordeAgent" `
+					-UsagePurpose "一時作業ディレクトリとキャッシュの保存" `
+					-Capacity $HACapacity `
+					-DirName $HADirName `
+					-ForceHASSD:$ForceHASSD
+				break
+			}
+			1 {
+				# example: 
+				$HAworkingDirectory = Join-Path -Path "D:\" -ChildPath $HADirName
+				if (Test-Path $HAworkingDirectory){
+					Write-Host "$HAworkingDirectory が既に存在するため、他のドライブを選択してください。" -ForegroundColor Red
+					$HAworkingDirectory = selectDrive -ApplicationName "UnrealHordeAgent" `
+					-UsagePurpose "一時作業ディレクトリとキャッシュの保存" `
+					-Capacity $HACapacity `
+					-DirName $HADirName `
+					-ForceHASSD:$ForceHASSD
+				}
+				Write-Host "保存先: $HAworkingDirectory" -ForegroundColor Green
+				break
+			}
+		}
+	}
+
 	# UnrealToolbox install
 	if ($Mode -eq 1) {
 		Write-Host "Downloading UnrealToolbox ..."
@@ -333,7 +378,7 @@ try {
 		}
 		Write-Host "UnrealToolbox MSI ExitCode: $($process.ExitCode)"
 
-		if ($process.ExitCode -notin @(0, 3010)) {
+		if ($process.ExitCode -notin @(0, 1638, 3010)) {
 			throw "UnrealToolboxのインストールに失敗しました。終了コード: $($process.ExitCode)"
 		}
 
@@ -359,30 +404,7 @@ try {
 		Write-Host "UnrealHordeAgent downloaded successfully." -ForegroundColor Green
 		Write-Host "Installing UnrealHordeAgent ..."
 
-		# 保存先選択処理
-		# 職種・用途によっては極力選択させないようにする
-		switch ($JobType) {
-			0 {
-				$workingDirectory = selectDrive -ApplicationName "UnrealHordeAgent" `
-					-UsagePurpose "一時作業ディレクトリとキャッシュの保存" `
-					-Capacity $HACapacity `
-					-DirName $HADirName
-				break
-			}
-			1 {
-				# example: 
-				$workingDirectory = Join-Path -Path "D:\" -ChildPath $HADirName
-				if (Test-Path $workingDirectory){
-					Write-Host "$workingDirectory が既に存在するため、他のドライブを選択してください。" -ForegroundColor Red
-					$workingDirectory = selectDrive -ApplicationName "UnrealHordeAgent" `
-					-UsagePurpose "一時作業ディレクトリとキャッシュの保存" `
-					-Capacity $HACapacity `
-					-DirName $HADirName
-				}
-				Write-Host "保存先: $workingDirectory" -ForegroundColor Green
-				break
-			}
-		}
+		$workingDirectory = $HAworkingDirectory
 
 		try {
 			$process = Start-Process -FilePath msiexec.exe -ArgumentList "/i `"$HAInstaller`" /qn /norestart /L*v `"$HALogFile`" SERVER_URL=`"$HordeServer`" SANDBOX_DIR=`"$workingDirectory`"" -Wait -PassThru -Verb RunAs
@@ -392,7 +414,7 @@ try {
 		}
 		Write-Host "UnrealHordeAgent MSI ExitCode: $($process.ExitCode)"
 
-		if ($process.ExitCode -notin @(0, 3010)) {
+		if ($process.ExitCode -notin @(0, 1638, 3010)) {
 			throw "UnrealHordeAgentのインストールに失敗しました。終了コード: $($process.ExitCode)"
 		}
 
@@ -412,15 +434,6 @@ try {
 			start $EnrollmentPage
 		}
 
-	}
-
-	# P4 認証チェック
-	Write-Host "Check Perforce authentication..."
-	try {
-		$p4Context = authP4
-	} catch {
-		Write-Error "Failed to Perforce Authentication. Error: $_"
-		exit 1
 	}
 
 	# UnrealBuildTool 設定ファイル(HordeAgent.json)の同期

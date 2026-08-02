@@ -55,7 +55,9 @@ function Get-PhysicalLocalDriveItems {
         [long]$EstimatedUsageBytes,
 
         [Parameter(Mandatory)]
-        [string]$PlannedFolderName
+        [string]$PlannedFolderName,
+
+        [switch]$ForceHASSD
     )
 
     $excludedBusTypes = @(
@@ -83,6 +85,22 @@ function Get-PhysicalLocalDriveItems {
                 -ErrorAction Stop
 
             $busType = $disk.BusType.ToString()
+
+            $physicalDisk = Get-PhysicalDisk -ErrorAction SilentlyContinue |
+                Where-Object { [string]$_.DeviceId -eq [string]$disk.Number } |
+                Select-Object -First 1
+
+            $mediaType = if (
+                $null -ne $physicalDisk -and
+                $null -ne $physicalDisk.MediaType
+            ) {
+                $physicalDisk.MediaType.ToString()
+            }
+            else {
+                "Unspecified"
+            }
+
+            $isSSD = $mediaType -eq "SSD" -or $busType -eq "NVMe"
 
             # 仮想ディスクやネットワーク経由のディスクを除外
             if ($busType -in $excludedBusTypes) {
@@ -132,13 +150,14 @@ function Get-PhysicalLocalDriveItems {
 
             $canSelect = (
                 $hasEnoughSpace -and
-                -not $folderExists
+                -not $folderExists -and
+                (-not $ForceHASSD -or $isSSD)
             )
 
             [pscustomobject]@{
                 DriveLetter     = $driveLetter
                 DisplayName     = "$volumeLabel ($driveLetter)"
-                DiskDescription = "$($disk.FriendlyName) / $busType"
+                DiskDescription = "$($disk.FriendlyName) / $busType / $mediaType"
                 UsedPercent     = $usedPercent
                 CanSelect       = $canSelect
 
@@ -150,7 +169,9 @@ function Get-PhysicalLocalDriveItems {
 
                 PercentageText = "使用済み $usedPercent%"
 
-                CapacityStatusText = if ($folderExists) {
+                CapacityStatusText = if ($ForceHASSD -and -not $isSSD) {
+                    "SSDのみ選択可能な設定な為、選択できません"
+                } elseif ($folderExists) {
                     "作成予定のフォルダ「$PlannedFolderName」が存在するため、選択できません"
                 } elseif (-not $hasEnoughSpace) {
                     "空き容量が使用容量目安を下回っているため、選択できません"
@@ -158,7 +179,9 @@ function Get-PhysicalLocalDriveItems {
                     "使用容量目安を満たしており、選択可能です"
                 }
 
-                CapacityStatusColor =  if ($folderExists) {
+                CapacityStatusColor = if ($ForceHASSD -and -not $isSSD) {
+                    "#6B7280"
+                } elseif ($folderExists) {
                     "#B91C1C"
                 } elseif (-not $hasEnoughSpace) {
                     "#B91C1C"
@@ -192,7 +215,9 @@ function Show-DriveSelectionWindow {
 
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [string]$PlannedFolderName
+        [string]$PlannedFolderName,
+
+        [switch]$ForceHASSD
     )
 
     Set-HordeTaskbarIdentity
@@ -252,6 +277,9 @@ function Show-DriveSelectionWindow {
     $txtEstimatedUsage = $window.FindName(
         "txtEstimatedUsage"
     )
+    $btnRefresh = $window.FindName("btnRefresh")
+    $txtRefreshLabel = $window.FindName("txtRefreshLabel")
+    $driveListBorder = $window.FindName("driveListBorder")
     $btnCancel = $window.FindName("btnCancel")
     $btnConfirm = $window.FindName("btnConfirm")
 
@@ -260,6 +288,9 @@ function Show-DriveSelectionWindow {
         $null -eq $txtStatus -or
         $null -eq $txtUsageDescription -or
         $null -eq $txtEstimatedUsage -or
+        $null -eq $btnRefresh -or
+        $null -eq $txtRefreshLabel -or
+        $null -eq $driveListBorder -or
         $null -eq $btnCancel -or
         $null -eq $btnConfirm
     ) {
@@ -282,33 +313,39 @@ function Show-DriveSelectionWindow {
         Cancelled     = $false
     }
 
-    $driveItems = @(
-        Get-PhysicalLocalDriveItems `
-            -EstimatedUsageBytes $EstimatedUsageBytes `
-            -PlannedFolderName $PlannedFolderName
-    )
+    $refreshDriveItems = {
+        $driveList.SelectedItem = $null
+        $btnConfirm.IsEnabled = $false
 
-    $driveList.ItemsSource = $driveItems
-
-    if ($driveItems.Count -eq 0) {
-        $txtStatus.Text = (
-            "選択可能な物理ローカルドライブが" +
-            "見つかりませんでした。"
+        $driveItems = @(
+            Get-PhysicalLocalDriveItems `
+                -EstimatedUsageBytes $EstimatedUsageBytes `
+                -PlannedFolderName $PlannedFolderName `
+                -ForceHASSD:$ForceHASSD
         )
-    }
-    else {
-        $enoughCount = @(
-            $driveItems |
-                Where-Object {
-                    $_.CapacityStatusColor -eq "#047857"
-                }
-        ).Count
 
-        $txtStatus.Text = (
-            "$($driveItems.Count) 個のドライブを検出しました。" +
-            " 容量目安を満たすドライブ: $enoughCount 個"
-        )
+        $driveList.ItemsSource = $null
+        $driveList.ItemsSource = $driveItems
+
+        if ($driveItems.Count -eq 0) {
+            $txtStatus.Text = (
+                "選択可能な物理ローカルドライブが" +
+                "見つかりませんでした。"
+            )
+        }
+        else {
+            $selectableCount = @(
+                $driveItems | Where-Object { $_.CanSelect }
+            ).Count
+
+            $txtStatus.Text = (
+                "$($driveItems.Count) 個のドライブを検出しました。" +
+                " 選択可能なドライブ: $selectableCount 個"
+            )
+        }
     }
+
+    & $refreshDriveItems
 
     $driveList.Add_SelectionChanged({
         $selectedDrive = $driveList.SelectedItem
@@ -319,6 +356,59 @@ function Show-DriveSelectionWindow {
         }
         else {
             $btnConfirm.IsEnabled = $false
+        }
+    })
+
+    $btnRefresh.Add_Click({
+        $refreshSucceeded = $false
+
+        try {
+            $btnRefresh.IsEnabled = $false
+            $txtRefreshLabel.Text = "確認中..."
+            $txtStatus.Text = "ドライブ情報を再チェックしています..."
+
+            & $refreshDriveItems
+            $refreshSucceeded = $true
+
+            $flashBrush = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.ColorConverter]::ConvertFromString("#DBEAFE")
+            )
+            $driveListBorder.Background = $flashBrush
+
+            $flashAnimation = [System.Windows.Media.Animation.ColorAnimation]::new()
+            $flashAnimation.From = [System.Windows.Media.ColorConverter]::ConvertFromString("#DBEAFE")
+            $flashAnimation.To = [System.Windows.Media.Colors]::White
+            $flashAnimation.Duration = [System.Windows.Duration]::new(
+                [TimeSpan]::FromMilliseconds(650)
+            )
+
+            $flashBrush.BeginAnimation(
+                [System.Windows.Media.SolidColorBrush]::ColorProperty,
+                $flashAnimation
+            )
+        }
+        catch {
+            $txtStatus.Text = "ドライブ情報の再チェックに失敗しました。"
+        }
+        finally {
+            if ($refreshSucceeded) {
+                $txtRefreshLabel.Text = "更新しました"
+
+                $resetTimer = [System.Windows.Threading.DispatcherTimer]::new()
+                $resetTimer.Interval = [TimeSpan]::FromMilliseconds(800)
+                $resetTimer.Add_Tick({
+                    param($sender, $eventArgs)
+
+                    $sender.Stop()
+                    $txtRefreshLabel.Text = "再チェック"
+                    $btnRefresh.IsEnabled = $true
+                })
+                $resetTimer.Start()
+            }
+            else {
+                $txtRefreshLabel.Text = "再チェック"
+                $btnRefresh.IsEnabled = $true
+            }
         }
     })
 

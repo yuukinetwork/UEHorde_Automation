@@ -16,76 +16,76 @@
     Background="#F3F4F6"
     FontFamily="Yu Gothic UI">
 
-    <Window.Resources>
-        <Style x:Key="DriveButtonStyle" TargetType="Button">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-            <Setter Property="Padding" Value="16"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Cursor" Value="Hand"/>
+	<Window.Resources>
+		<Style x:Key="DriveButtonStyle" TargetType="Button">
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+			<Setter Property="VerticalContentAlignment" Value="Stretch"/>
+			<Setter Property="Padding" Value="16"/>
+			<Setter Property="Margin" Value="0,0,0,10"/>
+			<Setter Property="Background" Value="White"/>
+			<Setter Property="BorderBrush" Value="#D1D5DB"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="Cursor" Value="Hand"/>
 
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#EFF6FF"/>
-                    <Setter Property="BorderBrush" Value="#60A5FA"/>
-                </Trigger>
+			<Style.Triggers>
+				<Trigger Property="IsMouseOver" Value="True">
+					<Setter Property="Background" Value="#EFF6FF"/>
+					<Setter Property="BorderBrush" Value="#60A5FA"/>
+				</Trigger>
 
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="#DBEAFE"/>
-                </Trigger>
+				<Trigger Property="IsPressed" Value="True">
+					<Setter Property="Background" Value="#DBEAFE"/>
+				</Trigger>
 
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Background" Value="#E5E7EB"/>
-                    <Setter Property="BorderBrush" Value="#D1D5DB"/>
-                    <Setter Property="Foreground" Value="#9CA3AF"/>
-                    <Setter Property="Opacity" Value="0.65"/>
-                    <Setter Property="Cursor" Value="Arrow"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
+				<Trigger Property="IsEnabled" Value="False">
+					<Setter Property="Background" Value="#E5E7EB"/>
+					<Setter Property="BorderBrush" Value="#D1D5DB"/>
+					<Setter Property="Foreground" Value="#9CA3AF"/>
+					<Setter Property="Opacity" Value="0.65"/>
+					<Setter Property="Cursor" Value="Arrow"/>
+				</Trigger>
+			</Style.Triggers>
+		</Style>
 
-        <Style TargetType="ProgressBar">
-            <Setter Property="Height" Value="14"/>
-            <Setter Property="Minimum" Value="0"/>
-            <Setter Property="Maximum" Value="100"/>
-            <Setter Property="Background" Value="#E5E7EB"/>
-            <Setter Property="BorderBrush" Value="#CBD5E1"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-    </Window.Resources>
+		<Style TargetType="ProgressBar">
+			<Setter Property="Height" Value="14"/>
+			<Setter Property="Minimum" Value="0"/>
+			<Setter Property="Maximum" Value="100"/>
+			<Setter Property="Background" Value="#E5E7EB"/>
+			<Setter Property="BorderBrush" Value="#CBD5E1"/>
+			<Setter Property="BorderThickness" Value="1"/>
+		</Style>
+	</Window.Resources>
 
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="12"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="18"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="18"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-		
+	<Grid Margin="24">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="12"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="18"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="18"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
 		<!-- タイトル -->
-        <StackPanel Grid.Row="0">
-            <TextBlock
+		<StackPanel Grid.Row="0">
+			<TextBlock
                 Text="ドライブを選択"
                 FontSize="24"
                 FontWeight="SemiBold"
                 Foreground="#111827"/>
 
-            <TextBlock
+			<TextBlock
                 x:Name="txtUsageDescription"
                 Margin="0,6,0,0"
                 Foreground="#4B5563"
                 TextWrapping="Wrap"/>
-        </StackPanel>
+		</StackPanel>
 
 
-        <!-- 使用容量目安 -->
-        <Border
+		<!-- 使用容量目安 -->
+		<Border
             Grid.Row="2"
             Padding="12"
             Background="#EFF6FF"
@@ -93,21 +93,21 @@
             BorderThickness="1"
             CornerRadius="5">
 
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="14"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="14"/>
+					<ColumnDefinition Width="*"/>
+				</Grid.ColumnDefinitions>
 
-                <TextBlock
+				<TextBlock
                     Grid.Column="0"
                     Text="使用容量目安"
                     FontWeight="SemiBold"
                     Foreground="#1E3A8A"
                     VerticalAlignment="Center"/>
 
-                <TextBlock
+				<TextBlock
                     x:Name="txtEstimatedUsage"
                     Grid.Column="2"
                     FontSize="16"
@@ -115,11 +115,12 @@
                     Foreground="#1E40AF"
                     TextWrapping="Wrap"
                     VerticalAlignment="Center"/>
-            </Grid>
-        </Border>
+			</Grid>
+		</Border>
 
-        <!-- ドライブ一覧 -->
-        <Border
+		<!-- ドライブ一覧 -->
+		<Border
+            x:Name="driveListBorder"
             Grid.Row="4"
             Padding="12"
             Background="White"
@@ -285,12 +286,14 @@
 					</DataTemplate>
 				</ListBox.ItemTemplate>
 			</ListBox>
-        </Border>
+		</Border>
 
-        <!-- 下部 -->
+		<!-- 下部 -->
 		<Grid Grid.Row="6">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="10"/>
 				<ColumnDefinition Width="Auto"/>
 				<ColumnDefinition Width="10"/>
 				<ColumnDefinition Width="Auto"/>
@@ -303,8 +306,36 @@
 				TextWrapping="Wrap"/>
 
 			<Button
-				x:Name="btnCancel"
+				x:Name="btnRefresh"
 				Grid.Column="1"
+				MinWidth="110"
+				MinHeight="38"
+				Padding="18,8">
+
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="8"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+
+					<TextBlock
+						x:Name="txtRefreshIcon"
+						Text="↻"
+						FontSize="17"
+						VerticalAlignment="Center"/>
+
+					<TextBlock
+						x:Name="txtRefreshLabel"
+						Grid.Column="2"
+						Text="再チェック"
+						VerticalAlignment="Center"/>
+				</Grid>
+			</Button>
+
+			<Button
+				x:Name="btnCancel"
+				Grid.Column="3"
 				MinWidth="110"
 				MinHeight="38"
 				Padding="18,8"
@@ -313,7 +344,7 @@
 
 			<Button
 				x:Name="btnConfirm"
-				Grid.Column="3"
+				Grid.Column="5"
 				MinWidth="110"
 				MinHeight="38"
 				Padding="18,8"
@@ -321,5 +352,5 @@
 				IsDefault="True"
 				IsEnabled="False"/>
 		</Grid>
-    </Grid>
+	</Grid>
 </Window>

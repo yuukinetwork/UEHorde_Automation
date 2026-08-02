@@ -134,6 +134,7 @@ TLS接続では`-P4Tls`を指定します。UnicodeモードのPerforce Server�
 | `HordeServer` | `http://localhost:13340/` | 接続先Horde ServerのURL |
 | `HADirName` | `HordeAgent` | Horde Agentの作業領域に使用するディレクトリ名 |
 | `HACapacity` | `50GB` | 保存先選択時に必要とみなす空き容量 |
+| `ForceHASSD` | 未指定 | 指定時はHordeAgentの作業領域としてSSDのみ選択可能 |
 | `TempDir` | `C:\HordeSetupToolTemp` | インストーラー、一時的なClient Workspace、ログの保存先 |
 | `Auth` | `0` | Horde Serverでユーザー認証が必要な場合は`1` |
 | `AutoEnrollmentMode` | `0` | HordeServerの設定でAgent自動登録が有効な場合は`1` |
