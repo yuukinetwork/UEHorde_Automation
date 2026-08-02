@@ -6,6 +6,7 @@
 # HordeServer: HordeサーバのURL
 # HADirName: HordeAgentのデータ用ディレクトリ名
 # HACapacity: HordeAgentのデータ用ディレクトリの容量目安, 空き容量足りない場合は選択不可
+# ForceHASSD: 指定時はHordeAgentの作業領域としてSSDのみ選択可能
 # TempDir: このスクリプトでダウンロードするインストーラやログの一時保存先
 # Auth: 0=HordeServerの認証なし, 1=HordeServerの認証あり
 # AutoEnrollmentMode: 0=HordeServer側でHordeAgent自動登録設定なし, 1=HordeServer側でHordeAgent自動登録設定あり
@@ -27,6 +28,7 @@ param(
 	[string]$HordeServer="http://localhost:13340/",
 	[string]$HADirName="HordeAgent",
 	[long]$HACapacity=50GB,
+	[switch]$ForceHASSD,
 	[string]$TempDir="C:\HordeSetupToolTemp",
 	[int]$Auth=0,
 	[int]$AutoEnrollmentMode=0,
@@ -184,7 +186,8 @@ try {
 			[string]$ApplicationName,
 			[string]$UsagePurpose,
 			[long]$Capacity,
-			[string]$DirName
+			[string]$DirName,
+			[switch]$ForceHASSD
 		)
 
 		Write-Host "ドライブ選択画面を出力しています、少々お待ちください..."
@@ -197,7 +200,8 @@ try {
 				-ApplicationName $ApplicationName `
 				-UsagePurpose $UsagePurpose `
 				-EstimatedUsageBytes $Capacity `
-				-PlannedFolderName $DirName
+				-PlannedFolderName $DirName `
+				-ForceHASSD:$ForceHASSD
 
 			if ($null -eq $selectedDrive) {
 				Write-Host "ドライブ選択がキャンセルされました。" -ForegroundColor Yellow
@@ -334,7 +338,8 @@ try {
 				$HAworkingDirectory = selectDrive -ApplicationName "UnrealHordeAgent" `
 					-UsagePurpose "一時作業ディレクトリとキャッシュの保存" `
 					-Capacity $HACapacity `
-					-DirName $HADirName
+					-DirName $HADirName `
+					-ForceHASSD:$ForceHASSD
 				break
 			}
 			1 {
@@ -345,7 +350,8 @@ try {
 					$HAworkingDirectory = selectDrive -ApplicationName "UnrealHordeAgent" `
 					-UsagePurpose "一時作業ディレクトリとキャッシュの保存" `
 					-Capacity $HACapacity `
-					-DirName $HADirName
+					-DirName $HADirName `
+					-ForceHASSD:$ForceHASSD
 				}
 				Write-Host "保存先: $HAworkingDirectory" -ForegroundColor Green
 				break

@@ -55,7 +55,9 @@ function Get-PhysicalLocalDriveItems {
         [long]$EstimatedUsageBytes,
 
         [Parameter(Mandatory)]
-        [string]$PlannedFolderName
+        [string]$PlannedFolderName,
+
+        [switch]$ForceHASSD
     )
 
     $excludedBusTypes = @(
@@ -83,6 +85,22 @@ function Get-PhysicalLocalDriveItems {
                 -ErrorAction Stop
 
             $busType = $disk.BusType.ToString()
+
+            $physicalDisk = Get-PhysicalDisk -ErrorAction SilentlyContinue |
+                Where-Object { [string]$_.DeviceId -eq [string]$disk.Number } |
+                Select-Object -First 1
+
+            $mediaType = if (
+                $null -ne $physicalDisk -and
+                $null -ne $physicalDisk.MediaType
+            ) {
+                $physicalDisk.MediaType.ToString()
+            }
+            else {
+                "Unspecified"
+            }
+
+            $isSSD = $mediaType -eq "SSD" -or $busType -eq "NVMe"
 
             # 仮想ディスクやネットワーク経由のディスクを除外
             if ($busType -in $excludedBusTypes) {
@@ -132,13 +150,14 @@ function Get-PhysicalLocalDriveItems {
 
             $canSelect = (
                 $hasEnoughSpace -and
-                -not $folderExists
+                -not $folderExists -and
+                (-not $ForceHASSD -or $isSSD)
             )
 
             [pscustomobject]@{
                 DriveLetter     = $driveLetter
                 DisplayName     = "$volumeLabel ($driveLetter)"
-                DiskDescription = "$($disk.FriendlyName) / $busType"
+                DiskDescription = "$($disk.FriendlyName) / $busType / $mediaType"
                 UsedPercent     = $usedPercent
                 CanSelect       = $canSelect
 
@@ -150,7 +169,9 @@ function Get-PhysicalLocalDriveItems {
 
                 PercentageText = "使用済み $usedPercent%"
 
-                CapacityStatusText = if ($folderExists) {
+                CapacityStatusText = if ($ForceHASSD -and -not $isSSD) {
+                    "SSDのみ選択可能な設定な為、選択できません"
+                } elseif ($folderExists) {
                     "作成予定のフォルダ「$PlannedFolderName」が存在するため、選択できません"
                 } elseif (-not $hasEnoughSpace) {
                     "空き容量が使用容量目安を下回っているため、選択できません"
@@ -158,7 +179,9 @@ function Get-PhysicalLocalDriveItems {
                     "使用容量目安を満たしており、選択可能です"
                 }
 
-                CapacityStatusColor =  if ($folderExists) {
+                CapacityStatusColor = if ($ForceHASSD -and -not $isSSD) {
+                    "#6B7280"
+                } elseif ($folderExists) {
                     "#B91C1C"
                 } elseif (-not $hasEnoughSpace) {
                     "#B91C1C"
@@ -192,7 +215,9 @@ function Show-DriveSelectionWindow {
 
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [string]$PlannedFolderName
+        [string]$PlannedFolderName,
+
+        [switch]$ForceHASSD
     )
 
     Set-HordeTaskbarIdentity
@@ -295,7 +320,8 @@ function Show-DriveSelectionWindow {
         $driveItems = @(
             Get-PhysicalLocalDriveItems `
                 -EstimatedUsageBytes $EstimatedUsageBytes `
-                -PlannedFolderName $PlannedFolderName
+                -PlannedFolderName $PlannedFolderName `
+                -ForceHASSD:$ForceHASSD
         )
 
         $driveList.ItemsSource = $null
@@ -406,11 +432,6 @@ function Show-DriveSelectionWindow {
         $window.Topmost = $true
         $window.Activate() | Out-Null
         $window.Focus() | Out-Null
-    })
-
-    # 最初の描画が完了したら常時最前面を解除
-    $window.Add_ContentRendered({
-        $window.Topmost = $false
     })
 
     $window.ShowDialog() | Out-Null
