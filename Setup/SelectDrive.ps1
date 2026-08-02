@@ -252,6 +252,9 @@ function Show-DriveSelectionWindow {
     $txtEstimatedUsage = $window.FindName(
         "txtEstimatedUsage"
     )
+    $btnRefresh = $window.FindName("btnRefresh")
+    $txtRefreshLabel = $window.FindName("txtRefreshLabel")
+    $driveListBorder = $window.FindName("driveListBorder")
     $btnCancel = $window.FindName("btnCancel")
     $btnConfirm = $window.FindName("btnConfirm")
 
@@ -260,6 +263,9 @@ function Show-DriveSelectionWindow {
         $null -eq $txtStatus -or
         $null -eq $txtUsageDescription -or
         $null -eq $txtEstimatedUsage -or
+        $null -eq $btnRefresh -or
+        $null -eq $txtRefreshLabel -or
+        $null -eq $driveListBorder -or
         $null -eq $btnCancel -or
         $null -eq $btnConfirm
     ) {
@@ -282,33 +288,38 @@ function Show-DriveSelectionWindow {
         Cancelled     = $false
     }
 
-    $driveItems = @(
-        Get-PhysicalLocalDriveItems `
-            -EstimatedUsageBytes $EstimatedUsageBytes `
-            -PlannedFolderName $PlannedFolderName
-    )
+    $refreshDriveItems = {
+        $driveList.SelectedItem = $null
+        $btnConfirm.IsEnabled = $false
 
-    $driveList.ItemsSource = $driveItems
-
-    if ($driveItems.Count -eq 0) {
-        $txtStatus.Text = (
-            "選択可能な物理ローカルドライブが" +
-            "見つかりませんでした。"
+        $driveItems = @(
+            Get-PhysicalLocalDriveItems `
+                -EstimatedUsageBytes $EstimatedUsageBytes `
+                -PlannedFolderName $PlannedFolderName
         )
-    }
-    else {
-        $enoughCount = @(
-            $driveItems |
-                Where-Object {
-                    $_.CapacityStatusColor -eq "#047857"
-                }
-        ).Count
 
-        $txtStatus.Text = (
-            "$($driveItems.Count) 個のドライブを検出しました。" +
-            " 容量目安を満たすドライブ: $enoughCount 個"
-        )
+        $driveList.ItemsSource = $null
+        $driveList.ItemsSource = $driveItems
+
+        if ($driveItems.Count -eq 0) {
+            $txtStatus.Text = (
+                "選択可能な物理ローカルドライブが" +
+                "見つかりませんでした。"
+            )
+        }
+        else {
+            $selectableCount = @(
+                $driveItems | Where-Object { $_.CanSelect }
+            ).Count
+
+            $txtStatus.Text = (
+                "$($driveItems.Count) 個のドライブを検出しました。" +
+                " 選択可能なドライブ: $selectableCount 個"
+            )
+        }
     }
+
+    & $refreshDriveItems
 
     $driveList.Add_SelectionChanged({
         $selectedDrive = $driveList.SelectedItem
@@ -319,6 +330,59 @@ function Show-DriveSelectionWindow {
         }
         else {
             $btnConfirm.IsEnabled = $false
+        }
+    })
+
+    $btnRefresh.Add_Click({
+        $refreshSucceeded = $false
+
+        try {
+            $btnRefresh.IsEnabled = $false
+            $txtRefreshLabel.Text = "確認中..."
+            $txtStatus.Text = "ドライブ情報を再チェックしています..."
+
+            & $refreshDriveItems
+            $refreshSucceeded = $true
+
+            $flashBrush = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.ColorConverter]::ConvertFromString("#DBEAFE")
+            )
+            $driveListBorder.Background = $flashBrush
+
+            $flashAnimation = [System.Windows.Media.Animation.ColorAnimation]::new()
+            $flashAnimation.From = [System.Windows.Media.ColorConverter]::ConvertFromString("#DBEAFE")
+            $flashAnimation.To = [System.Windows.Media.Colors]::White
+            $flashAnimation.Duration = [System.Windows.Duration]::new(
+                [TimeSpan]::FromMilliseconds(650)
+            )
+
+            $flashBrush.BeginAnimation(
+                [System.Windows.Media.SolidColorBrush]::ColorProperty,
+                $flashAnimation
+            )
+        }
+        catch {
+            $txtStatus.Text = "ドライブ情報の再チェックに失敗しました。"
+        }
+        finally {
+            if ($refreshSucceeded) {
+                $txtRefreshLabel.Text = "更新しました"
+
+                $resetTimer = [System.Windows.Threading.DispatcherTimer]::new()
+                $resetTimer.Interval = [TimeSpan]::FromMilliseconds(800)
+                $resetTimer.Add_Tick({
+                    param($sender, $eventArgs)
+
+                    $sender.Stop()
+                    $txtRefreshLabel.Text = "再チェック"
+                    $btnRefresh.IsEnabled = $true
+                })
+                $resetTimer.Start()
+            }
+            else {
+                $txtRefreshLabel.Text = "再チェック"
+                $btnRefresh.IsEnabled = $true
+            }
         }
     })
 
@@ -342,6 +406,11 @@ function Show-DriveSelectionWindow {
         $window.Topmost = $true
         $window.Activate() | Out-Null
         $window.Focus() | Out-Null
+    })
+
+    # 最初の描画が完了したら常時最前面を解除
+    $window.Add_ContentRendered({
+        $window.Topmost = $false
     })
 
     $window.ShowDialog() | Out-Null
