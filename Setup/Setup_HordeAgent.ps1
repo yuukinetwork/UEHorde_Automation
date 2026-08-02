@@ -333,7 +333,7 @@ try {
 		}
 		Write-Host "UnrealToolbox MSI ExitCode: $($process.ExitCode)"
 
-		if ($process.ExitCode -notin @(0, 3010)) {
+		if ($process.ExitCode -notin @(0, 1638, 3010)) {
 			throw "UnrealToolboxのインストールに失敗しました。終了コード: $($process.ExitCode)"
 		}
 
@@ -392,7 +392,7 @@ try {
 		}
 		Write-Host "UnrealHordeAgent MSI ExitCode: $($process.ExitCode)"
 
-		if ($process.ExitCode -notin @(0, 3010)) {
+		if ($process.ExitCode -notin @(0, 1638, 3010)) {
 			throw "UnrealHordeAgentのインストールに失敗しました。終了コード: $($process.ExitCode)"
 		}
 
