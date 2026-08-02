@@ -466,23 +466,60 @@ try {
 		$sourceConfig = Get-Content $SyncedHACPath -Raw -Encoding UTF8 |
 			ConvertFrom-Json
 
-		if (Test-Path -LiteralPath $Local_HACPath -PathType Leaf) {
-			$localConfig = Get-Content -LiteralPath $Local_HACPath -Raw -Encoding UTF8 |
-				ConvertFrom-Json
+		$localConfigExists = Test-Path -LiteralPath $Local_HACPath -PathType Leaf
 
-			# 既存ファイルには指定項目だけ反映
-			$localConfig.mode = $sourceConfig.mode
-			$localConfig.idle = $sourceConfig.idle
-			$localConfig.cpu.cpuMultiplier = $sourceConfig.cpu.cpuMultiplier
+		# ローカルが存在しない、空、破損している場合の既定値
+		$localConfig = $sourceConfig
+
+		if ($localConfigExists) {
+			try {
+				$loadedLocalConfig = Get-Content `
+					-LiteralPath $Local_HACPath `
+					-Raw `
+					-Encoding UTF8 |
+					ConvertFrom-Json -ErrorAction Stop
+
+				if ($null -eq $loadedLocalConfig) {
+					throw
+				}
+
+				$loadedLocalConfig |
+					Add-Member -NotePropertyName mode `
+						-NotePropertyValue $sourceConfig.mode -Force
+
+				$loadedLocalConfig |
+					Add-Member -NotePropertyName idle `
+						-NotePropertyValue $sourceConfig.idle -Force
+
+				if ($null -eq $loadedLocalConfig.cpu) {
+					$loadedLocalConfig |
+						Add-Member -NotePropertyName cpu `
+							-NotePropertyValue ([pscustomobject]@{}) -Force
+				}
+
+				$loadedLocalConfig.cpu |
+					Add-Member -NotePropertyName cpuMultiplier `
+						-NotePropertyValue $sourceConfig.cpu.cpuMultiplier -Force
+
+				# ここまで正常に処理できた場合だけローカル設定を採用
+				$localConfig = $loadedLocalConfig
+			}
+			catch {
+				# 空・破損時は、既に設定済みのsourceConfigをそのまま使用
+			}
 		}
+
+		$logicalCpuCount = (
+			Get-CimInstance Win32_ComputerSystem
+		).NumberOfLogicalProcessors
+
+		# どの経路でもcpuCountを保証
+		if ($null -eq $localConfig.cpu.cpuCount) {
+			$localConfig.cpu |
+				Add-Member -NotePropertyName cpuCount `
+					-NotePropertyValue ([int]$logicalCpuCount) -Force
+		} 
 		else {
-			# ローカルに存在しない場合はP4版をベースに新規作成
-			$localConfig = $sourceConfig
-
-			$logicalCpuCount = (
-				Get-CimInstance Win32_ComputerSystem
-			).NumberOfLogicalProcessors
-
 			$localConfig.cpu.cpuCount = [int]$logicalCpuCount
 		}
 
